@@ -1,12 +1,10 @@
 import ffmpeg from 'fluent-ffmpeg'
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import path from 'path'
 import fs from 'fs/promises'
 import { nanoid } from 'nanoid'
 import { downloadYouTube } from '../youtube/downloader'
 
-// Set FFmpeg path for Vercel deployment
-ffmpeg.setFfmpegPath(ffmpegInstaller.path)
+// FFmpeg path will be set dynamically inside the function to avoid build errors
 
 export interface ProcessOptions {
   id: string
@@ -80,12 +78,16 @@ export async function processAudio(
   options: ProcessOptions,
   onProgress?: (progress: number) => void
 ): Promise<{ mp3Path: string; wavPath: string }> {
+  // Set up FFmpeg path - using ffmpeg-static for better Vercel compatibility
   try {
-    // Log FFmpeg path for debugging
-    console.log('FFmpeg path:', ffmpegInstaller.path)
-    console.log('Processing with options:', { sourceType: options.sourceType, preset: options.preset })
+    const ffmpegStatic = require('ffmpeg-static')
+    if (ffmpegStatic) {
+      ffmpeg.setFfmpegPath(ffmpegStatic)
+      console.log('FFmpeg path set:', ffmpegStatic)
+    }
   } catch (err) {
-    console.error('FFmpeg setup error:', err)
+    console.error('FFmpeg setup warning:', err)
+    // Continue anyway - ffmpeg might be available in the system
   }
   
   const outputId = nanoid()
