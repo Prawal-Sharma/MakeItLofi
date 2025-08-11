@@ -143,7 +143,8 @@ export async function downloadYouTube(url: string, jobId: string): Promise<strin
           throw new Error('This video is private and cannot be processed')
         }
         
-        if (details.age_restricted) {
+        // Check for age restriction (property might be named differently)
+        if ((details as any).age_restricted || (details as any).ageRestricted) {
           throw new Error('This video is age-restricted and cannot be processed')
         }
         
@@ -289,7 +290,7 @@ export async function getVideoInfo(url: string) {
       duration,
       author: details.channel?.name || 'Unknown',
       thumbnail: details.thumbnails?.[0]?.url,
-      isValid: !details.private && !details.age_restricted && duration <= 600
+      isValid: !details.private && !(details as any).age_restricted && !(details as any).ageRestricted && duration <= 600
     }
   } catch (error) {
     console.error('Failed to get video info:', error)
