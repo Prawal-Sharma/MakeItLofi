@@ -7,6 +7,7 @@ import PresetSelector from './components/PresetSelector'
 import ProcessButton from './components/ProcessButton'
 import ProgressBar from './components/ProgressBar'
 import AudioPlayer from './components/AudioPlayer'
+import CassetteAnimation from './components/CassetteAnimation'
 
 export type SourceType = 'youtube' | 'upload' | null
 export type Preset = 'default' | 'tape90s' | 'sleep'
@@ -131,22 +132,22 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-4">
+    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-2xl">
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-lofi-dark mb-4">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-lofi-dark mb-3 sm:mb-4">
             Make It Lo-Fi
           </h1>
-          <p className="text-lofi-brown text-lg">
+          <p className="text-lofi-brown text-base sm:text-lg px-4 sm:px-0">
             Transform any audio into nostalgic lo-fi vibes
           </p>
         </div>
 
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 cassette-shadow">
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 cassette-shadow">
           {jobStatus === 'idle' && (
             <>
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <button
                     onClick={() => setSourceType('youtube')}
                     className={`p-4 rounded-lg border-2 transition-all ${
@@ -155,10 +156,12 @@ export default function Home() {
                         : 'border-gray-200 hover:border-lofi-purple/50'
                     }`}
                   >
-                    <svg className="w-8 h-8 mx-auto mb-2 text-lofi-purple" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                    </svg>
-                    <span className="text-sm font-medium">YouTube URL</span>
+                    <div className="flex items-center justify-center space-x-3 sm:block sm:space-x-0">
+                      <svg className="w-8 h-8 sm:mx-auto sm:mb-2 text-lofi-purple" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <span className="text-sm font-medium">YouTube URL</span>
+                    </div>
                   </button>
                   
                   <button
@@ -169,10 +172,12 @@ export default function Home() {
                         : 'border-gray-200 hover:border-lofi-purple/50'
                     }`}
                   >
-                    <svg className="w-8 h-8 mx-auto mb-2 text-lofi-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <span className="text-sm font-medium">Upload File</span>
+                    <div className="flex items-center justify-center space-x-3 sm:block sm:space-x-0">
+                      <svg className="w-8 h-8 sm:mx-auto sm:mb-2 text-lofi-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span className="text-sm font-medium">Upload File</span>
+                    </div>
                   </button>
                 </div>
 
@@ -201,12 +206,7 @@ export default function Home() {
           )}
 
           {(jobStatus === 'pending' || jobStatus === 'processing') && (
-            <div className="space-y-6">
-              <ProgressBar progress={progress} status={jobStatus} />
-              <p className="text-center text-lofi-brown">
-                {jobStatus === 'pending' ? 'Preparing your audio...' : 'Applying lo-fi magic...'}
-              </p>
-            </div>
+            <CassetteAnimation progress={progress} status={jobStatus} />
           )}
 
           {jobStatus === 'completed' && outputUrls && (
@@ -220,7 +220,7 @@ export default function Home() {
               
               <AudioPlayer mp3Url={outputUrls.mp3} />
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <a
                   href={outputUrls.mp3}
                   download
