@@ -138,7 +138,7 @@ export async function processAudio(
         ffmpegProcess.kill('SIGKILL')
         reject(new Error('Processing timeout - took too long'))
       }
-    }, 25000) // 25 second timeout for Vercel
+    }, 45000) // 45 second timeout for processing
     
     ffmpegProcess = ffmpeg(inputPath)
       .audioFilters(audioFilters)
@@ -173,7 +173,7 @@ export async function processAudio(
         ffmpegProcess.kill('SIGKILL')
         reject(new Error('MP3 conversion timeout'))
       }
-    }, 20000) // 20 second timeout for Vercel
+    }, 30000) // 30 second timeout for conversion
     
     ffmpegProcess = ffmpeg(wavPath)
       .audioCodec('libmp3lame')

@@ -18,9 +18,9 @@
     "ioredis": "^5.7.0",
     "nanoid": "^5.1.5",
     "next": "15.1.0",
+    "play-dl": "^1.9.7",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "ytdl-core": "^4.11.5"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/fluent-ffmpeg": "^2.1.27",

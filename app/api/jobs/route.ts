@@ -14,7 +14,7 @@ import {
 } from '@/lib/utils/validation'
 
 export const runtime = 'nodejs'
-export const maxDuration = 30 // 30 seconds timeout
+export const maxDuration = 60 // 60 seconds timeout for YouTube downloads
 
 export async function POST(request: NextRequest) {
   try {
@@ -172,7 +172,13 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     )
   } catch (error) {
-    console.error('Job creation error:', error)
+    // Enhanced error logging
+    console.error('Job creation error:', {
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    })
+    
     return NextResponse.json(
       { error: sanitizeErrorMessage(error) },
       { status: 500 }

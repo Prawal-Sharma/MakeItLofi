@@ -40,11 +40,28 @@ export function getQueue(): Bull.Queue {
       queue = new Bull('audio-processing')
     }
     
-    // Process jobs
+    // Process jobs with error handling
     queue.process(async (job) => {
-      return await processAudio(job.data, (progress) => {
-        job.progress(progress)
+      console.log(`Processing job ${job.id}:`, {
+        data: job.data,
+        timestamp: new Date().toISOString()
       })
+      
+      try {
+        const result = await processAudio(job.data, (progress) => {
+          job.progress(progress)
+        })
+        
+        console.log(`Job ${job.id} completed successfully`)
+        return result
+      } catch (error) {
+        console.error(`Job ${job.id} failed:`, {
+          error: error instanceof Error ? error.message : error,
+          stack: error instanceof Error ? error.stack : undefined,
+          data: job.data
+        })
+        throw error
+      }
     })
     
     // Error handling
@@ -53,7 +70,13 @@ export function getQueue(): Bull.Queue {
     })
     
     queue.on('failed', (job, error) => {
-      console.error(`Job ${job.id} failed:`, error)
+      console.error(`Job ${job.id} failed:`, {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        attempts: job.attemptsMade,
+        data: job.data,
+        timestamp: new Date().toISOString()
+      })
     })
   }
   

@@ -59,12 +59,18 @@ export async function GET(
     }
     
     if (status === 'failed') {
-      response.error = job.failedReason || 'Processing failed'
+      // Sanitize the error message before sending to client
+      response.error = sanitizeErrorMessage({ message: job.failedReason }) || 'Processing failed'
+      console.error(`Job ${id} failed reason:`, job.failedReason)
     }
     
     return NextResponse.json(response)
   } catch (error) {
-    console.error('Error fetching job:', error)
+    console.error('Error fetching job:', {
+      jobId: (await params).id,
+      error: error instanceof Error ? error.message : error,
+      timestamp: new Date().toISOString()
+    })
     return NextResponse.json(
       { error: sanitizeErrorMessage(error) },
       { status: 500 }

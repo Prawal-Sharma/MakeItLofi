@@ -1,5 +1,4 @@
 import path from 'path'
-import ytdl from 'ytdl-core'
 
 // Job ID validation - alphanumeric only
 export function isValidJobId(id: string): boolean {
@@ -22,7 +21,42 @@ export function isValidFormat(format: string): format is ValidFormat {
   return VALID_FORMATS.includes(format as ValidFormat)
 }
 
-// YouTube URL validation
+// Extract video ID from various YouTube URL formats
+export function extractVideoId(url: string): string | null {
+  try {
+    const urlObj = new URL(url)
+    
+    // Handle youtu.be format
+    if (urlObj.hostname === 'youtu.be') {
+      return urlObj.pathname.slice(1).split('?')[0]
+    }
+    
+    // Handle youtube.com formats
+    if (urlObj.hostname.includes('youtube.com')) {
+      // Regular video URL or playlist
+      if (urlObj.searchParams.get('v')) {
+        return urlObj.searchParams.get('v')
+      }
+      
+      // YouTube Shorts
+      if (urlObj.pathname.includes('/shorts/')) {
+        const match = urlObj.pathname.match(/\/shorts\/([a-zA-Z0-9_-]+)/)
+        return match ? match[1] : null
+      }
+      
+      // YouTube Music
+      if (urlObj.pathname.includes('/watch')) {
+        return urlObj.searchParams.get('v')
+      }
+    }
+    
+    return null
+  } catch {
+    return null
+  }
+}
+
+// Simple YouTube URL validation (non-async)
 export function isValidYouTubeUrl(url: string): boolean {
   try {
     const urlObj = new URL(url)
@@ -40,8 +74,9 @@ export function isValidYouTubeUrl(url: string): boolean {
       return false
     }
     
-    // Use ytdl-core's validation
-    return ytdl.validateURL(url)
+    // Extract video ID to handle playlists and other formats
+    const videoId = extractVideoId(url)
+    return videoId !== null && videoId.length === 11
   } catch {
     return false
   }
@@ -128,19 +163,32 @@ export function sanitizeErrorMessage(error: unknown): string {
     // Check for known safe error messages
     const safeMessages: Record<string, string> = {
       'Invalid YouTube URL': 'Please provide a valid YouTube URL',
+      'private': 'This video is private and cannot be processed',
+      'age-restricted': 'This video is age-restricted and cannot be processed',
+      'too long': 'Video is too long. Please use videos under 10 minutes',
+      'timeout': 'Download timed out. Please try a shorter video or check your connection',
+      'no longer available': 'This video is no longer available',
+      'region-restricted': 'This video may be region-restricted',
+      'Could not access': 'Could not access video. It may be restricted or deleted',
+      'Could not fetch': 'Could not access video. Please try another URL',
       'File too large': 'File size must be less than 100MB',
       'Invalid file type': 'Please upload a WAV, MP3, or FLAC file',
       'Processing failed': 'Audio processing failed. Please try again',
       'Job not found': 'Processing job not found',
       'Invalid format': 'Invalid audio format requested',
+      '403': 'Access denied. The video may be restricted',
+      '410': 'This video is no longer available',
     }
     
-    // Check if error message starts with any safe message
+    // Check if error message contains any safe message keys
     for (const [key, value] of Object.entries(safeMessages)) {
-      if (error.message.includes(key)) {
+      if (error.message.toLowerCase().includes(key.toLowerCase())) {
         return value
       }
     }
+    
+    // Log the actual error for debugging
+    console.error('Unsanitized error:', error.message)
   }
   
   // Default safe error message
