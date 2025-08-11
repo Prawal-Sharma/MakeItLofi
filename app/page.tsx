@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import FileUpload from './components/FileUpload'
 import URLInput from './components/URLInput'
 import PresetSelector from './components/PresetSelector'
@@ -22,6 +22,7 @@ export default function Home() {
   const [progress, setProgress] = useState(0)
   const [outputUrls, setOutputUrls] = useState<{ mp3: string; wav: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleProcess = async () => {
     setError(null)
@@ -63,7 +64,12 @@ export default function Home() {
   }
 
   const pollJobStatus = async (id: string) => {
-    const interval = setInterval(async () => {
+    // Clear any existing interval
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+    }
+    
+    pollIntervalRef.current = setInterval(async () => {
       try {
         const response = await fetch(`/api/jobs/${id}`)
         const data = await response.json()
@@ -72,24 +78,48 @@ export default function Home() {
         setJobStatus(data.status)
         
         if (data.status === 'completed') {
-          clearInterval(interval)
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current)
+            pollIntervalRef.current = null
+          }
           setOutputUrls({
             mp3: `/api/download/${id}/mp3`,
             wav: `/api/download/${id}/wav`,
           })
         } else if (data.status === 'failed') {
-          clearInterval(interval)
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current)
+            pollIntervalRef.current = null
+          }
           setError(data.error || 'Processing failed')
         }
       } catch (err) {
-        clearInterval(interval)
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current)
+          pollIntervalRef.current = null
+        }
         setError('Failed to check job status')
         setJobStatus('failed')
       }
     }, 1000)
   }
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+      }
+    }
+  }, [])
 
   const handleReset = () => {
+    // Clear any polling interval
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+    
     setSourceType(null)
     setSourceUrl('')
     setSourceFile(null)

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getJob } from '@/lib/queue/jobQueue'
+import { isValidJobId, sanitizeErrorMessage } from '@/lib/utils/validation'
 
 export async function GET(
   request: NextRequest,
@@ -7,6 +8,15 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    
+    // Validate job ID
+    if (!isValidJobId(id)) {
+      return NextResponse.json(
+        { error: 'Invalid job ID' },
+        { status: 400 }
+      )
+    }
+    
     const job = await getJob(id)
     
     if (!job) {
@@ -56,7 +66,7 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching job:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch job status' },
+      { error: sanitizeErrorMessage(error) },
       { status: 500 }
     )
   }

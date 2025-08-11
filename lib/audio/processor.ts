@@ -109,9 +109,17 @@ export async function processAudio(
     `volume=${preset.saturation}`,
   ].join(',')
   
-  // Process to WAV first
+  // Process to WAV first with timeout and cleanup
   await new Promise<void>((resolve, reject) => {
-    ffmpeg(inputPath)
+    let ffmpegProcess: any = null
+    const timeout = setTimeout(() => {
+      if (ffmpegProcess) {
+        ffmpegProcess.kill('SIGKILL')
+        reject(new Error('Processing timeout - took too long'))
+      }
+    }, 120000) // 2 minute timeout
+    
+    ffmpegProcess = ffmpeg(inputPath)
       .audioFilters(audioFilters)
       .audioCodec('pcm_s16le')
       .audioFrequency(44100)
@@ -122,16 +130,31 @@ export async function processAudio(
           onProgress(30 + progress.percent * 0.35)
         }
       })
-      .on('end', () => resolve())
-      .on('error', (err) => reject(err))
-      .run()
+      .on('end', () => {
+        clearTimeout(timeout)
+        resolve()
+      })
+      .on('error', (err) => {
+        clearTimeout(timeout)
+        reject(err)
+      })
+    
+    ffmpegProcess.run()
   })
   
   onProgress?.(70)
   
-  // Convert to MP3
+  // Convert to MP3 with timeout and cleanup
   await new Promise<void>((resolve, reject) => {
-    ffmpeg(wavPath)
+    let ffmpegProcess: any = null
+    const timeout = setTimeout(() => {
+      if (ffmpegProcess) {
+        ffmpegProcess.kill('SIGKILL')
+        reject(new Error('MP3 conversion timeout'))
+      }
+    }, 60000) // 1 minute timeout
+    
+    ffmpegProcess = ffmpeg(wavPath)
       .audioCodec('libmp3lame')
       .audioBitrate('320k')
       .output(mp3Path)
@@ -140,9 +163,16 @@ export async function processAudio(
           onProgress(70 + progress.percent * 0.3)
         }
       })
-      .on('end', () => resolve())
-      .on('error', (err) => reject(err))
-      .run()
+      .on('end', () => {
+        clearTimeout(timeout)
+        resolve()
+      })
+      .on('error', (err) => {
+        clearTimeout(timeout)
+        reject(err)
+      })
+    
+    ffmpegProcess.run()
   })
   
   onProgress?.(100)

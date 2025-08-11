@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
-import formidable from 'formidable'
 import fs from 'fs/promises'
 import path from 'path'
 import { addJob } from '@/lib/queue/jobQueue'
+import { 
+  isValidPreset, 
+  isValidYouTubeUrl, 
+  isValidAudioFile,
+  isValidFileSize,
+  isValidMimeType,
+  sanitizePath,
+  sanitizeErrorMessage 
+} from '@/lib/utils/validation'
 
 export const runtime = 'nodejs'
+export const maxDuration = 30 // 30 seconds timeout
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +25,15 @@ export async function POST(request: NextRequest) {
       const formData = await request.formData()
       const sourceType = formData.get('sourceType') as string
       const preset = formData.get('preset') as string || 'default'
+      
+      // Validate preset
+      if (!isValidPreset(preset)) {
+        return NextResponse.json(
+          { error: 'Invalid preset selected' },
+          { status: 400 }
+        )
+      }
+      
       const jobId = nanoid()
       
       if (sourceType === 'upload') {
@@ -28,11 +46,40 @@ export async function POST(request: NextRequest) {
           )
         }
         
-        // Save uploaded file
-        const uploadDir = path.join(process.cwd(), 'uploads')
-        const filePath = path.join(uploadDir, `${jobId}_${file.name}`)
+        // Validate file size
+        if (!isValidFileSize(file.size)) {
+          return NextResponse.json(
+            { error: 'File size must be less than 100MB' },
+            { status: 400 }
+          )
+        }
         
+        // Validate MIME type
+        if (!isValidMimeType(file.type)) {
+          return NextResponse.json(
+            { error: 'Invalid file type. Please upload WAV, MP3, or FLAC' },
+            { status: 400 }
+          )
+        }
+        
+        // Get file buffer and validate magic bytes
         const buffer = Buffer.from(await file.arrayBuffer())
+        if (!isValidAudioFile(buffer)) {
+          return NextResponse.json(
+            { error: 'Invalid audio file format' },
+            { status: 400 }
+          )
+        }
+        
+        // Sanitize filename and save
+        const sanitizedName = sanitizePath(file.name)
+        const uploadDir = path.join(process.cwd(), 'uploads')
+        const filePath = path.join(uploadDir, `${jobId}_${sanitizedName}`)
+        
+        // Ensure upload directory exists
+        await fs.mkdir(uploadDir, { recursive: true })
+        
+        // Write file with size limit enforced
         await fs.writeFile(filePath, buffer)
         
         // Add job to queue
@@ -40,7 +87,7 @@ export async function POST(request: NextRequest) {
           id: jobId,
           sourceType: 'upload',
           filePath,
-          preset: preset as any,
+          preset,
         })
         
         return NextResponse.json({ jobId })
@@ -54,12 +101,20 @@ export async function POST(request: NextRequest) {
           )
         }
         
+        // Validate YouTube URL
+        if (!isValidYouTubeUrl(sourceUrl)) {
+          return NextResponse.json(
+            { error: 'Invalid YouTube URL' },
+            { status: 400 }
+          )
+        }
+        
         // Add job to queue
         await addJob({
           id: jobId,
           sourceType: 'youtube',
           sourceUrl,
-          preset: preset as any,
+          preset,
         })
         
         return NextResponse.json({ jobId })
@@ -68,6 +123,15 @@ export async function POST(request: NextRequest) {
       // Handle JSON request
       const body = await request.json()
       const { source, preset = 'default' } = body
+      
+      // Validate preset
+      if (!isValidPreset(preset)) {
+        return NextResponse.json(
+          { error: 'Invalid preset selected' },
+          { status: 400 }
+        )
+      }
+      
       const jobId = nanoid()
       
       if (!source) {
@@ -78,20 +142,28 @@ export async function POST(request: NextRequest) {
       }
       
       if (source.type === 'youtube') {
+        // Validate YouTube URL
+        if (!isValidYouTubeUrl(source.url)) {
+          return NextResponse.json(
+            { error: 'Invalid YouTube URL' },
+            { status: 400 }
+          )
+        }
+        
         await addJob({
           id: jobId,
           sourceType: 'youtube',
           sourceUrl: source.url,
           preset,
         })
+        
+        return NextResponse.json({ jobId })
       } else {
         return NextResponse.json(
           { error: 'Invalid source type' },
           { status: 400 }
         )
       }
-      
-      return NextResponse.json({ jobId })
     }
     
     return NextResponse.json(
@@ -101,7 +173,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Job creation error:', error)
     return NextResponse.json(
-      { error: 'Failed to create job' },
+      { error: sanitizeErrorMessage(error) },
       { status: 500 }
     )
   }
