@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@vercel/analytics": "^1.5.0",
     "bull": "^4.16.5",
     "fluent-ffmpeg": "^2.1.3",
     "formidable": "^3.5.4",

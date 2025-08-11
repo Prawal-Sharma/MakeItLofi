@@ -22,13 +22,21 @@ export function getQueue(): Bull.Queue {
   if (!queue) {
     const redisUrl = process.env.REDIS_URL
     
-    if (redisUrl) {
-      redis = new Redis(redisUrl)
-      queue = new Bull('audio-processing', {
-        createClient: () => redis!.duplicate(),
-      })
+    if (redisUrl && redisUrl !== 'optional') {
+      // Use Redis if URL is provided
+      try {
+        redis = new Redis(redisUrl)
+        queue = new Bull('audio-processing', {
+          createClient: () => redis!.duplicate(),
+        })
+        console.log('Using Redis for job queue')
+      } catch (error) {
+        console.warn('Redis connection failed, falling back to in-memory queue:', error)
+        queue = new Bull('audio-processing')
+      }
     } else {
-      // In-memory queue for development
+      // In-memory queue for development and small deployments
+      console.log('Using in-memory queue (Redis not configured)')
       queue = new Bull('audio-processing')
     }
     
