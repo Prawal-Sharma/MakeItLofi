@@ -1,8 +1,12 @@
 import ffmpeg from 'fluent-ffmpeg'
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import path from 'path'
 import fs from 'fs/promises'
 import { nanoid } from 'nanoid'
 import { downloadYouTube } from '../youtube/downloader'
+
+// Set FFmpeg path for Vercel deployment
+ffmpeg.setFfmpegPath(ffmpegInstaller.path)
 
 export interface ProcessOptions {
   id: string
@@ -76,8 +80,23 @@ export async function processAudio(
   options: ProcessOptions,
   onProgress?: (progress: number) => void
 ): Promise<{ mp3Path: string; wavPath: string }> {
+  try {
+    // Log FFmpeg path for debugging
+    console.log('FFmpeg path:', ffmpegInstaller.path)
+    console.log('Processing with options:', { sourceType: options.sourceType, preset: options.preset })
+  } catch (err) {
+    console.error('FFmpeg setup error:', err)
+  }
+  
   const outputId = nanoid()
-  const outputDir = path.join(process.cwd(), 'processed')
+  // Use /tmp for Vercel compatibility
+  const outputDir = process.env.NODE_ENV === 'production' 
+    ? '/tmp' 
+    : path.join(process.cwd(), 'processed')
+  
+  // Ensure directory exists
+  await fs.mkdir(outputDir, { recursive: true }).catch(() => {})
+  
   const mp3Path = path.join(outputDir, `${outputId}.mp3`)
   const wavPath = path.join(outputDir, `${outputId}.wav`)
   
@@ -117,7 +136,7 @@ export async function processAudio(
         ffmpegProcess.kill('SIGKILL')
         reject(new Error('Processing timeout - took too long'))
       }
-    }, 120000) // 2 minute timeout
+    }, 25000) // 25 second timeout for Vercel
     
     ffmpegProcess = ffmpeg(inputPath)
       .audioFilters(audioFilters)
@@ -152,7 +171,7 @@ export async function processAudio(
         ffmpegProcess.kill('SIGKILL')
         reject(new Error('MP3 conversion timeout'))
       }
-    }, 60000) // 1 minute timeout
+    }, 20000) // 20 second timeout for Vercel
     
     ffmpegProcess = ffmpeg(wavPath)
       .audioCodec('libmp3lame')

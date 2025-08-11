@@ -73,11 +73,12 @@ export async function POST(request: NextRequest) {
         
         // Sanitize filename and save
         const sanitizedName = sanitizePath(file.name)
-        const uploadDir = path.join(process.cwd(), 'uploads')
+        // Use /tmp for Vercel
+        const uploadDir = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(process.cwd(), 'uploads')
         const filePath = path.join(uploadDir, `${jobId}_${sanitizedName}`)
         
         // Ensure upload directory exists
-        await fs.mkdir(uploadDir, { recursive: true })
+        await fs.mkdir(uploadDir, { recursive: true }).catch(() => {})
         
         // Write file with size limit enforced
         await fs.writeFile(filePath, buffer)

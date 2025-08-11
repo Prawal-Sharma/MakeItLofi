@@ -38,13 +38,23 @@ export async function GET(
       )
     }
     
-    // Get the file path and ensure it's within the processed directory
-    const processedDir = path.join(process.cwd(), 'processed')
+    // Get the file path
     const filePath = format === 'mp3' ? job.result.mp3Path : job.result.wavPath
     
-    // Critical: Resolve the path and ensure it's within the processed directory
+    // For production, files are in /tmp
+    // For development, they're in the processed directory
+    const processedDir = process.env.NODE_ENV === 'production' 
+      ? '/tmp'
+      : path.join(process.cwd(), 'processed')
+    
+    // Resolve the path
     const resolvedPath = path.resolve(filePath)
-    if (!resolvedPath.startsWith(processedDir)) {
+    
+    // Security check - ensure path is within allowed directories
+    const allowedDirs = ['/tmp', path.join(process.cwd(), 'processed')]
+    const isAllowed = allowedDirs.some(dir => resolvedPath.startsWith(dir))
+    
+    if (!isAllowed) {
       // Potential directory traversal attack
       console.error('Directory traversal attempt detected:', { id, format, filePath })
       return NextResponse.json(

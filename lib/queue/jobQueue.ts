@@ -107,9 +107,14 @@ export async function cleanupOldFiles() {
   const fs = await import('fs/promises')
   const path = await import('path')
   
-  const uploadsDir = path.join(process.cwd(), 'uploads')
-  const processedDir = path.join(process.cwd(), 'processed')
-  const maxAge = 1000 * 60 * 60 * 2 // 2 hours
+  // Use appropriate directories based on environment
+  const uploadsDir = process.env.NODE_ENV === 'production' 
+    ? '/tmp' 
+    : path.join(process.cwd(), 'uploads')
+  const processedDir = process.env.NODE_ENV === 'production'
+    ? '/tmp'
+    : path.join(process.cwd(), 'processed')
+  const maxAge = 1000 * 60 * 30 // 30 minutes for production
   
   const cleanDirectory = async (dir: string) => {
     try {
