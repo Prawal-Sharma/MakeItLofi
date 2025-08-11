@@ -6,16 +6,13 @@
   "regions": ["iad1"],
   "functions": {
     "app/api/jobs/route.ts": {
-      "maxDuration": 30,
-      "runtime": "nodejs20.x"
+      "maxDuration": 30
     },
     "app/api/jobs/[id]/route.ts": {
-      "maxDuration": 10,
-      "runtime": "nodejs20.x"
+      "maxDuration": 10
     },
     "app/api/download/[id]/[format]/route.ts": {
-      "maxDuration": 30,
-      "runtime": "nodejs20.x"
+      "maxDuration": 30
     }
   },
   "env": {
