@@ -4,15 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/encode-textures.js",
     "build": "next build",
-    "start": "next start",
+    "start": "node server.js",
+    "start:worker": "node worker.js",
+    "start:all": "concurrently \"npm run start\" \"npm run start:worker\"",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@vercel/analytics": "^1.5.0",
     "bull": "^4.16.5",
+    "concurrently": "^8.2.2",
+    "express": "^4.21.2",
     "ffmpeg-static": "^5.2.0",
     "fluent-ffmpeg": "^2.1.3",
     "formidable": "^3.5.4",

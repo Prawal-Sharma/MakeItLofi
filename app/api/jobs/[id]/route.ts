@@ -17,36 +17,7 @@ export async function GET(
       )
     }
     
-    // In production, check global storage first
-    if (process.env.NODE_ENV === 'production') {
-      // @ts-ignore
-      const jobResult = global.jobResults?.[id]
-      
-      if (jobResult) {
-        const response: any = {
-          id,
-          status: jobResult.status,
-          progress: jobResult.progress || 100,
-        }
-        
-        if (jobResult.status === 'completed' && jobResult.result) {
-          response.output = {
-            mp3Url: `/api/download/${id}/mp3`,
-            wavUrl: `/api/download/${id}/wav`,
-          }
-        }
-        
-        return NextResponse.json(response)
-      }
-      
-      // If not in global storage, job doesn't exist
-      return NextResponse.json(
-        { error: 'Job not found' },
-        { status: 404 }
-      )
-    }
-    
-    // Development: use queue
+    // Always use queue (works with Railway)
     const job = await getJob(id)
     
     if (!job) {
