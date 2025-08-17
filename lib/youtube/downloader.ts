@@ -78,9 +78,9 @@ async function isYtDlpAvailable(): Promise<boolean> {
   }
 }
 
-// Download using yt-dlp as fallback
+// Download using yt-dlp
 async function downloadWithYtDlp(url: string, outputPath: string): Promise<void> {
-  console.log('Attempting download with yt-dlp fallback...')
+  console.log('Attempting download with yt-dlp...')
   
   const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 -o "${outputPath}" "${url}"`
   
@@ -95,9 +95,6 @@ async function downloadWithYtDlp(url: string, outputPath: string): Promise<void>
 
 export async function downloadYouTube(url: string, jobId: string): Promise<string> {
   try {
-    // Initialize play-dl if needed
-    await initializePlayDl()
-    
     // Extract and validate video ID
     const videoId = extractVideoId(url)
     if (!videoId) {
@@ -119,7 +116,23 @@ export async function downloadYouTube(url: string, jobId: string): Promise<strin
     
     const outputPath = path.join(uploadDir, `${jobId}.mp3`)
     
-    // Try play-dl first with retries
+    // Try yt-dlp first if available
+    if (await isYtDlpAvailable()) {
+      try {
+        await downloadWithYtDlp(cleanUrl, outputPath)
+        if (fs.existsSync(outputPath)) {
+          console.log('Successfully downloaded with yt-dlp')
+          return outputPath
+        }
+      } catch (ytDlpError) {
+        console.error('yt-dlp failed, falling back to play-dl:', ytDlpError)
+      }
+    }
+    
+    // Initialize play-dl if needed
+    await initializePlayDl()
+    
+    // Try play-dl as fallback with retries
     try {
       await retryWithBackoff(async () => {
         // Validate URL with play-dl
@@ -206,21 +219,7 @@ export async function downloadYouTube(url: string, jobId: string): Promise<strin
       
       return outputPath
     } catch (playDlError) {
-      console.error('play-dl failed:', playDlError)
-      
-      // Try yt-dlp as fallback if available
-      if (await isYtDlpAvailable()) {
-        try {
-          await downloadWithYtDlp(cleanUrl, outputPath)
-          if (fs.existsSync(outputPath)) {
-            return outputPath
-          }
-        } catch (ytDlpError) {
-          console.error('yt-dlp fallback also failed:', ytDlpError)
-        }
-      }
-      
-      // Throw original error if all methods fail
+      console.error('play-dl also failed:', playDlError)
       throw playDlError
     }
   } catch (error) {

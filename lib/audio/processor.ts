@@ -78,16 +78,30 @@ export async function processAudio(
   options: ProcessOptions,
   onProgress?: (progress: number) => void
 ): Promise<{ mp3Path: string; wavPath: string }> {
-  // Set up FFmpeg path - using ffmpeg-static for better Vercel compatibility
+  // Set up FFmpeg path - use system ffmpeg if available, otherwise use ffmpeg-static
   try {
-    const ffmpegStatic = require('ffmpeg-static')
-    if (ffmpegStatic) {
-      ffmpeg.setFfmpegPath(ffmpegStatic)
-      console.log('FFmpeg path set:', ffmpegStatic)
+    const { exec } = require('child_process')
+    const { promisify } = require('util')
+    const execAsync = promisify(exec)
+    
+    // Check if ffmpeg is available in the system
+    try {
+      const { stdout } = await execAsync('which ffmpeg')
+      if (stdout && stdout.trim()) {
+        ffmpeg.setFfmpegPath(stdout.trim())
+        console.log('Using system FFmpeg:', stdout.trim())
+      }
+    } catch {
+      // Try ffmpeg-static as fallback
+      const ffmpegStatic = require('ffmpeg-static')
+      if (ffmpegStatic && require('fs').existsSync(ffmpegStatic)) {
+        ffmpeg.setFfmpegPath(ffmpegStatic)
+        console.log('Using ffmpeg-static:', ffmpegStatic)
+      }
     }
   } catch (err) {
     console.error('FFmpeg setup warning:', err)
-    // Continue anyway - ffmpeg might be available in the system
+    // Continue anyway - ffmpeg might be available in the PATH
   }
   
   const outputId = nanoid()

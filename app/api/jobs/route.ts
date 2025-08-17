@@ -84,14 +84,14 @@ export async function POST(request: NextRequest) {
         await fs.writeFile(filePath, buffer)
         
         // Add job to queue
-        await addJob({
+        const bullJobId = await addJob({
           id: jobId,
           sourceType: 'upload',
           filePath,
           preset,
         })
         
-        return NextResponse.json({ jobId })
+        return NextResponse.json({ jobId: bullJobId })
       } else if (sourceType === 'youtube') {
         const sourceUrl = formData.get('sourceUrl') as string
         
@@ -111,14 +111,14 @@ export async function POST(request: NextRequest) {
         }
         
         // Add job to queue
-        await addJob({
+        const bullJobId = await addJob({
           id: jobId,
           sourceType: 'youtube',
           sourceUrl,
           preset,
         })
         
-        return NextResponse.json({ jobId })
+        return NextResponse.json({ jobId: bullJobId })
       }
     } else {
       // Handle JSON request
@@ -151,14 +151,14 @@ export async function POST(request: NextRequest) {
           )
         }
         
-        await addJob({
+        const bullJobId = await addJob({
           id: jobId,
           sourceType: 'youtube',
           sourceUrl: source.url,
           preset,
         })
         
-        return NextResponse.json({ jobId })
+        return NextResponse.json({ jobId: bullJobId })
       } else {
         return NextResponse.json(
           { error: 'Invalid source type' },

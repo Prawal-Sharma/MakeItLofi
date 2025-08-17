@@ -1,9 +1,7 @@
 import Bull from 'bull'
 import { processAudio } from '../audio/processor'
-import Redis from 'ioredis'
 
 let queue: Bull.Queue | null = null
-let redis: Redis | null = null
 
 export interface JobData {
   id: string
@@ -22,21 +20,14 @@ export function getQueue(): Bull.Queue {
   if (!queue) {
     const redisUrl = process.env.REDIS_URL
     
-    if (redisUrl && redisUrl !== 'optional') {
+    if (redisUrl && redisUrl !== 'optional' && redisUrl !== '') {
       // Use Redis if URL is provided
-      try {
-        redis = new Redis(redisUrl)
-        queue = new Bull('audio-processing', {
-          createClient: () => redis!.duplicate(),
-        })
-        console.log('Using Redis for job queue')
-      } catch (error) {
-        console.warn('Redis connection failed, falling back to in-memory queue:', error)
-        queue = new Bull('audio-processing')
-      }
+      console.log('Using Redis for job queue')
+      queue = new Bull('audio-processing', redisUrl)
     } else {
-      // In-memory queue for development and small deployments
-      console.log('Using in-memory queue (Redis not configured)')
+      // In-memory queue for development - Bull will use local Redis
+      console.log('Using local queue (Redis not configured)')
+      // We need to provide a minimal config that won't attempt external connections
       queue = new Bull('audio-processing')
     }
     
