@@ -194,7 +194,8 @@ export async function processAudio(
     tapePath = path.join(textureDir, 'tape_hiss.wav')
   }
   
-  if (existsSync(vinylPath) || existsSync(rainPath) || existsSync(tapePath)) {
+  // Temporarily disable textures in production to avoid timeout (Vercel Hobby plan limit is 60s)
+  if (process.env.NODE_ENV !== 'production' && (existsSync(vinylPath) || existsSync(rainPath) || existsSync(tapePath))) {
     console.log('Step 2: Adding texture layers...')
     const finalWavPath = path.join(outputDir, `${outputId}_final.wav`)
     
