@@ -4,7 +4,6 @@ import fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { nanoid } from 'nanoid'
 import { downloadYouTube } from '../youtube/downloader'
-import { getTextureBuffers } from './textures'
 
 // FFmpeg path will be set dynamically inside the function to avoid build errors
 
@@ -165,34 +164,11 @@ export async function processAudio(
   
   onProgress?.(60)
   
-  // STEP 2: Add textures if available (optional enhancement)
-  let vinylPath: string
-  let rainPath: string
-  let tapePath: string
-  
-  if (process.env.NODE_ENV === 'production') {
-    // In production, write embedded textures to /tmp
-    const textureDir = '/tmp/textures'
-    await fs.mkdir(textureDir, { recursive: true }).catch(() => {})
-    
-    console.log('Writing texture files to /tmp for production...')
-    const textures = getTextureBuffers()
-    
-    vinylPath = path.join(textureDir, 'vinyl_crackle.wav')
-    rainPath = path.join(textureDir, 'rain_ambient.wav')
-    tapePath = path.join(textureDir, 'tape_hiss.wav')
-    
-    await fs.writeFile(vinylPath, textures.vinyl)
-    await fs.writeFile(rainPath, textures.rain)
-    await fs.writeFile(tapePath, textures.tape)
-    console.log('Texture files written successfully')
-  } else {
-    // In development, use files from public directory
-    const textureDir = path.join(process.cwd(), 'public/audio/textures')
-    vinylPath = path.join(textureDir, 'vinyl_crackle.wav')
-    rainPath = path.join(textureDir, 'rain_ambient.wav')
-    tapePath = path.join(textureDir, 'tape_hiss.wav')
-  }
+  // STEP 2: Add textures for authentic lo-fi sound
+  const textureDir = path.join(process.cwd(), 'public/audio/textures')
+  const vinylPath = path.join(textureDir, 'vinyl_crackle.wav')
+  const rainPath = path.join(textureDir, 'rain_ambient.wav')
+  const tapePath = path.join(textureDir, 'tape_hiss.wav')
   
   // Add texture layers for authentic lo-fi sound
   if (existsSync(vinylPath) || existsSync(rainPath) || existsSync(tapePath)) {

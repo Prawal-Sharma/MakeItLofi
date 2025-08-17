@@ -6,8 +6,7 @@
   "regions": ["iad1"],
   "functions": {
     "app/api/jobs/route.ts": {
-      "maxDuration": 60,
-      "includeFiles": "public/audio/textures/**"
+      "maxDuration": 60
     },
     "app/api/jobs/[id]/route.ts": {
       "maxDuration": 10
