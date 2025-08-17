@@ -146,7 +146,7 @@ export async function processAudio(
   console.log(`Processed audio volume: ${processedVolume} dB`)
   
   // If too quiet, apply emergency boost
-  if (processedVolume < -30) {
+  if (processedVolume < -20) {
     console.log('Audio too quiet, applying emergency boost...')
     await new Promise<void>((resolve, reject) => {
       ffmpeg(tempWavPath)
@@ -205,13 +205,13 @@ export async function processAudio(
       let filterComplex = ''
       if (inputCount === 2) {
         // Main + one texture
-        filterComplex = `[0:a]volume=0.6[main];[1:a]volume=${lofiPreset.textureLevel}[tex];[main][tex]amix=inputs=2:duration=first[out]`
+        filterComplex = `[0:a]volume=0.6[main];[1:a]volume=${lofiPreset.textureLevel}[tex];[main][tex]amix=inputs=2:duration=first:normalize=0[mixed];[mixed]loudnorm=I=-16:TP=-1.5:LRA=11[out]`
       } else if (inputCount === 3) {
         // Main + two textures
-        filterComplex = `[0:a]volume=0.5[main];[1:a]volume=${lofiPreset.textureLevel * 0.8}[tex1];[2:a]volume=${lofiPreset.textureLevel * 0.9}[tex2];[main][tex1][tex2]amix=inputs=3:duration=first[out]`
+        filterComplex = `[0:a]volume=0.5[main];[1:a]volume=${lofiPreset.textureLevel * 0.8}[tex1];[2:a]volume=${lofiPreset.textureLevel * 0.9}[tex2];[main][tex1][tex2]amix=inputs=3:duration=first:normalize=0[mixed];[mixed]loudnorm=I=-16:TP=-1.5:LRA=11[out]`
       } else if (inputCount === 4) {
         // Main + all three textures (vinyl, tape, rain)
-        filterComplex = `[0:a]volume=0.85[main];[1:a]volume=${lofiPreset.textureLevel * 1.0}[vinyl];[2:a]volume=${lofiPreset.textureLevel * 0.3}[tape];[3:a]volume=${lofiPreset.textureLevel * 1.5}[rain];[main][vinyl][tape][rain]amix=inputs=4:duration=first[out]`
+        filterComplex = `[0:a]volume=0.85[main];[1:a]volume=${lofiPreset.textureLevel * 1.0}[vinyl];[2:a]volume=${lofiPreset.textureLevel * 0.3}[tape];[3:a]volume=${lofiPreset.textureLevel * 1.5}[rain];[main][vinyl][tape][rain]amix=inputs=4:duration=first:normalize=0[mixed];[mixed]loudnorm=I=-16:TP=-1.5:LRA=11[out]`
       }
       
       await new Promise<void>((resolve, reject) => {
@@ -274,7 +274,7 @@ export async function processAudio(
   const mp3Volume = await checkVolume(mp3Path)
   console.log(`Final MP3 volume: ${mp3Volume} dB`)
   
-  if (mp3Volume < -50) {
+  if (mp3Volume < -30) {
     console.error('WARNING: Output audio is too quiet!', mp3Volume, 'dB')
     // Apply one more emergency boost
     const boostedPath = path.join(outputDir, `${outputId}_boosted.mp3`)
