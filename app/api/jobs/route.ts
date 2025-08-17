@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 import fs from 'fs/promises'
 import path from 'path'
 import { addJob } from '@/lib/queue/jobQueue'
+import { processAudio } from '@/lib/audio/processor-simple'
 import { 
   isValidPreset, 
   isValidYouTubeUrl, 
@@ -110,15 +111,50 @@ export async function POST(request: NextRequest) {
           )
         }
         
-        // Add job to queue
-        const bullJobId = await addJob({
-          id: jobId,
-          sourceType: 'youtube',
-          sourceUrl,
-          preset,
-        })
-        
-        return NextResponse.json({ jobId: bullJobId })
+        // In production, process directly (no queue support in serverless)
+        if (process.env.NODE_ENV === 'production') {
+          try {
+            // Process immediately
+            const result = await processAudio({
+              sourceType: 'youtube',
+              sourceUrl,
+              preset,
+              id: jobId
+            })
+            
+            // Store result in global for retrieval
+            // @ts-ignore
+            global.jobResults = global.jobResults || {}
+            // @ts-ignore
+            global.jobResults[jobId] = {
+              status: 'completed',
+              progress: 100,
+              result
+            }
+            
+            return NextResponse.json({ 
+              jobId,
+              status: 'completed',
+              result 
+            })
+          } catch (error) {
+            console.error('Processing error:', error)
+            return NextResponse.json(
+              { error: 'Processing failed. Please try a shorter video.' },
+              { status: 500 }
+            )
+          }
+        } else {
+          // Development: use queue
+          const bullJobId = await addJob({
+            id: jobId,
+            sourceType: 'youtube',
+            sourceUrl,
+            preset,
+          })
+          
+          return NextResponse.json({ jobId: bullJobId })
+        }
       }
     } else {
       // Handle JSON request
