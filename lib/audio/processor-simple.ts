@@ -165,9 +165,14 @@ export async function processAudio(
   onProgress?.(60)
   
   // STEP 2: Add textures if available (optional enhancement)
-  const vinylPath = path.join(process.cwd(), 'public/audio/textures/vinyl_crackle.wav')
-  const rainPath = path.join(process.cwd(), 'public/audio/textures/rain_ambient.wav')
-  const tapePath = path.join(process.cwd(), 'public/audio/textures/tape_hiss.wav')
+  // In production, textures are included via includeFiles directive
+  const textureDir = process.env.NODE_ENV === 'production' 
+    ? path.join(process.cwd(), 'public/audio/textures')
+    : path.join(process.cwd(), 'public/audio/textures')
+  
+  const vinylPath = path.join(textureDir, 'vinyl_crackle.wav')
+  const rainPath = path.join(textureDir, 'rain_ambient.wav')
+  const tapePath = path.join(textureDir, 'tape_hiss.wav')
   
   if (existsSync(vinylPath) || existsSync(rainPath) || existsSync(tapePath)) {
     console.log('Step 2: Adding texture layers...')
