@@ -75,7 +75,8 @@ export async function GET(
     
     // Get file stats for headers
     const stats = statSync(resolvedPath)
-    const filename = `lofi_${id}.${format}`
+    // Extract actual filename from the path
+    const filename = path.basename(resolvedPath)
     
     // Create a readable stream instead of loading entire file into memory
     const stream = createReadStream(resolvedPath)

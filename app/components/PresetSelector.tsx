@@ -10,21 +10,9 @@ interface PresetSelectorProps {
 const presets = [
   {
     id: 'default' as Preset,
-    name: 'Default',
-    description: 'Balanced lo-fi with classic warmth',
+    name: 'Authentic Lo-Fi',
+    description: 'Classic lo-fi with vinyl crackle, tape warmth & nostalgic vibes',
     color: 'bg-lofi-purple',
-  },
-  {
-    id: 'tape90s' as Preset,
-    name: 'Tape 90s',
-    description: 'Warmer, more saturated cassette sound',
-    color: 'bg-lofi-pink',
-  },
-  {
-    id: 'sleep' as Preset,
-    name: 'Sleep',
-    description: 'Slower, dreamier with extra reverb',
-    color: 'bg-lofi-blue',
   },
 ]
 
@@ -34,7 +22,7 @@ export default function PresetSelector({ value, onChange }: PresetSelectorProps)
       <label className="block text-sm font-medium text-lofi-dark">
         Choose Your Vibe
       </label>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {presets.map((preset) => (
           <button
             key={preset.id}

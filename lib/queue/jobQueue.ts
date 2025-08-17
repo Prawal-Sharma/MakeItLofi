@@ -1,5 +1,5 @@
 import Bull from 'bull'
-import { processAudio } from '../audio/processor'
+import { processAudio } from '../audio/processor-simple'
 
 let queue: Bull.Queue | null = null
 
