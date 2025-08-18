@@ -149,7 +149,11 @@ const VALID_MIME_TYPES = [
   'audio/mpeg',
   'audio/mp3',
   'audio/flac',
-  'audio/x-flac'
+  'audio/x-flac',
+  'audio/mp4',
+  'audio/x-m4a',
+  'audio/m4a',
+  'audio/aac'
 ]
 
 export function isValidMimeType(mimeType: string): boolean {

@@ -3,7 +3,6 @@ import path from 'path'
 import fs from 'fs/promises'
 import { existsSync, createWriteStream } from 'fs'
 import { nanoid } from 'nanoid'
-import { downloadYouTube } from './youtube-downloader'
 import { uploadToVercelBlob } from './vercel-blob'
 
 import { copyFileSync, chmodSync } from 'fs'
@@ -36,9 +35,8 @@ async function setupFfmpeg() {
 
 export interface ProcessJobData {
   id: string
-  sourceType: 'youtube' | 'upload'
-  sourceUrl?: string
-  uploadKey?: string // S3 key for uploaded files
+  sourceType: 'upload'
+  uploadKey: string // Vercel Blob URL for uploaded files
   preset: 'default' | 'tape90s' | 'sleep'
 }
 
@@ -145,19 +143,11 @@ export async function processAudioJob(
   let inputPath: string = ''
   
   try {
-    // Get input file
-    if (jobData.sourceType === 'youtube' && jobData.sourceUrl) {
-      onProgress?.(10)
-      inputPath = await downloadYouTube(jobData.sourceUrl, jobData.id, workDir)
-      onProgress?.(30)
-    } else if (jobData.uploadKey) {
-      onProgress?.(10)
-      inputPath = path.join(workDir, `${jobData.id}_input`)
-      await downloadFromVercelBlob(jobData.uploadKey, inputPath)
-      onProgress?.(30)
-    } else {
-      throw new Error('No input source provided')
-    }
+    // Get input file from Vercel Blob
+    onProgress?.(10)
+    inputPath = path.join(workDir, `${jobData.id}_input`)
+    await downloadFromVercelBlob(jobData.uploadKey, inputPath)
+    onProgress?.(30)
     
     // STEP 1: Process main audio with lo-fi effects (matching main app)
     console.log('Step 1: Processing main audio with lo-fi effects...')

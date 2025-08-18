@@ -2,20 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react'
 import FileUpload from './components/FileUpload'
-import URLInput from './components/URLInput'
 import PresetSelector from './components/PresetSelector'
 import ProcessButton from './components/ProcessButton'
-import ProgressBar from './components/ProgressBar'
 import AudioPlayer from './components/AudioPlayer'
 import CassetteAnimation from './components/CassetteAnimation'
 
-export type SourceType = 'youtube' | 'upload' | null
 export type Preset = 'default' | 'tape90s' | 'sleep'
 export type JobStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
 
 export default function Home() {
-  const [sourceType, setSourceType] = useState<SourceType>(null)
-  const [sourceUrl, setSourceUrl] = useState('')
   const [sourceFile, setSourceFile] = useState<File | null>(null)
   const [preset, setPreset] = useState<Preset>('default')
   const [jobId, setJobId] = useState<string | null>(null)
@@ -26,21 +21,15 @@ export default function Home() {
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleProcess = async () => {
+    if (!sourceFile) return
+    
     setError(null)
     setJobStatus('pending')
     setProgress(0)
     
     try {
       const formData = new FormData()
-      
-      if (sourceType === 'youtube') {
-        formData.append('sourceType', 'youtube')
-        formData.append('sourceUrl', sourceUrl)
-      } else if (sourceType === 'upload' && sourceFile) {
-        formData.append('sourceType', 'upload')
-        formData.append('file', sourceFile)
-      }
-      
+      formData.append('file', sourceFile)
       formData.append('preset', preset)
       
       const response = await fetch('/api/jobs', {
@@ -122,8 +111,6 @@ export default function Home() {
       pollIntervalRef.current = null
     }
     
-    setSourceType(null)
-    setSourceUrl('')
     setSourceFile(null)
     setJobId(null)
     setJobStatus('idle')
@@ -140,70 +127,25 @@ export default function Home() {
             Make It Lo-Fi
           </h1>
           <p className="text-lofi-brown text-base sm:text-lg px-4 sm:px-0">
-            Transform any audio into nostalgic lo-fi vibes
+            Transform your audio into nostalgic lo-fi vibes
           </p>
         </div>
 
         <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 cassette-shadow">
           {jobStatus === 'idle' && (
-            <>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <button
-                    onClick={() => setSourceType('youtube')}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      sourceType === 'youtube'
-                        ? 'border-lofi-purple bg-lofi-purple/10'
-                        : 'border-gray-200 hover:border-lofi-purple/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center space-x-3 sm:block sm:space-x-0">
-                      <svg className="w-8 h-8 sm:mx-auto sm:mb-2 text-lofi-purple" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                      </svg>
-                      <span className="text-sm font-medium">YouTube URL</span>
-                    </div>
-                  </button>
-                  
-                  <button
-                    onClick={() => setSourceType('upload')}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      sourceType === 'upload'
-                        ? 'border-lofi-purple bg-lofi-purple/10'
-                        : 'border-gray-200 hover:border-lofi-purple/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center space-x-3 sm:block sm:space-x-0">
-                      <svg className="w-8 h-8 sm:mx-auto sm:mb-2 text-lofi-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <span className="text-sm font-medium">Upload File</span>
-                    </div>
-                  </button>
-                </div>
-
-                {sourceType === 'youtube' && (
-                  <URLInput value={sourceUrl} onChange={setSourceUrl} />
-                )}
-                
-                {sourceType === 'upload' && (
-                  <FileUpload onFileSelect={setSourceFile} />
-                )}
-                
-                {sourceType && (
-                  <>
-                    <PresetSelector value={preset} onChange={setPreset} />
-                    <ProcessButton 
-                      onClick={handleProcess}
-                      disabled={
-                        (sourceType === 'youtube' && !sourceUrl) ||
-                        (sourceType === 'upload' && !sourceFile)
-                      }
-                    />
-                  </>
-                )}
-              </div>
-            </>
+            <div className="space-y-6">
+              <FileUpload onFileSelect={setSourceFile} />
+              
+              {sourceFile && (
+                <>
+                  <PresetSelector value={preset} onChange={setPreset} />
+                  <ProcessButton 
+                    onClick={handleProcess}
+                    disabled={!sourceFile}
+                  />
+                </>
+              )}
+            </div>
           )}
 
           {(jobStatus === 'pending' || jobStatus === 'processing') && (

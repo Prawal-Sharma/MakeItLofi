@@ -9,13 +9,14 @@ interface FileUploadProps {
 export default function FileUpload({ onFileSelect }: FileUploadProps) {
   const [fileName, setFileName] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
+  const [loadingSample, setLoadingSample] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = (file: File) => {
-    const validTypes = ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/flac', 'audio/x-flac']
+    const validTypes = ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/flac', 'audio/x-flac', 'audio/mp4', 'audio/x-m4a', 'audio/m4a']
     
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(wav|mp3|flac)$/i)) {
-      alert('Please upload a WAV, MP3, or FLAC file')
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(wav|mp3|flac|m4a|aac)$/i)) {
+      alert('Please upload a WAV, MP3, FLAC, or M4A file')
       return
     }
     
@@ -55,6 +56,20 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
     }
   }
 
+  const loadSampleAudio = async () => {
+    setLoadingSample(true)
+    try {
+      const response = await fetch('/samples/sample.mp3')
+      const blob = await response.blob()
+      const file = new File([blob], 'sample.mp3', { type: 'audio/mpeg' })
+      handleFile(file)
+    } catch (error) {
+      alert('Failed to load sample audio. Please try uploading your own file.')
+    } finally {
+      setLoadingSample(false)
+    }
+  }
+
   return (
     <div
       className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
@@ -68,7 +83,7 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
       <input
         ref={inputRef}
         type="file"
-        accept="audio/wav,audio/mp3,audio/mpeg,audio/flac"
+        accept="audio/wav,audio/mp3,audio/mpeg,audio/flac,audio/mp4,audio/x-m4a,audio/m4a"
         onChange={handleChange}
         className="hidden"
       />
@@ -91,16 +106,27 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
           <svg className="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          <div>
-            <button
-              onClick={() => inputRef.current?.click()}
-              className="text-lofi-purple font-medium hover:underline"
-            >
-              Choose a file
-            </button>
-            <span className="text-gray-500"> or drag and drop</span>
+          <div className="space-y-2">
+            <p className="text-gray-600">Drag and drop your audio file here</p>
+            <p className="text-gray-500">or</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => inputRef.current?.click()}
+                className="px-4 py-2 bg-lofi-purple text-white rounded-lg hover:bg-lofi-purple/90 transition-colors"
+              >
+                Browse Files
+              </button>
+              <button
+                onClick={loadSampleAudio}
+                disabled={loadingSample}
+                className="px-4 py-2 bg-lofi-blue text-white rounded-lg hover:bg-lofi-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loadingSample ? 'Loading...' : 'Try Sample'}
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-gray-500">WAV, MP3, or FLAC up to 100MB</p>
+          <p className="text-xs text-gray-500">WAV, MP3, FLAC, or M4A up to 100MB</p>
+          <p className="text-xs text-gray-400">No audio file? Try our sample to test the lo-fi effect!</p>
         </div>
       )}
     </div>
