@@ -109,7 +109,7 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
           <div className="space-y-2">
             <p className="text-gray-600">Drag and drop your audio file here</p>
             <p className="text-gray-500">or</p>
-            <div className="flex gap-3 justify-center">
+            <div className="flex gap-3 justify-center flex-wrap">
               <button
                 onClick={() => inputRef.current?.click()}
                 className="px-4 py-2 bg-lofi-purple text-white rounded-lg hover:bg-lofi-purple/90 transition-colors"
@@ -123,25 +123,20 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
               >
                 {loadingSample ? 'Loading...' : 'Try Sample'}
               </button>
+              <a
+                href="/samples/sample.mp3"
+                download="sample-original.mp3"
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors inline-flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download Sample
+              </a>
             </div>
           </div>
           <p className="text-xs text-gray-500">WAV, MP3, FLAC, or M4A up to 100MB</p>
-          <div className="space-y-1">
-            <p className="text-xs text-gray-400">No audio file? Try our sample to test the lo-fi effect!</p>
-            <p className="text-xs text-gray-400">
-              <a 
-                href="/samples/sample.mp3" 
-                download="sample-original.mp3"
-                className="text-lofi-purple hover:underline inline-flex items-center gap-1"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download original sample
-              </a>
-              to compare before/after
-            </p>
-          </div>
+          <p className="text-xs text-gray-400">No audio file? Try our sample to test the lo-fi effect!</p>
         </div>
       )}
     </div>
