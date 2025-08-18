@@ -14,7 +14,7 @@ import {
 } from '@/lib/utils/validation'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60 // 60 seconds timeout for YouTube downloads
+export const maxDuration = 300 // 5 minutes timeout for Pro plan
 
 export async function POST(request: NextRequest) {
   try {
