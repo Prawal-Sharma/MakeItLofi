@@ -31,7 +31,10 @@ export default function Home() {
     try {
       // First, upload the file directly to Vercel Blob
       setProgress(5) // Show initial progress
-      const blob = await upload(sourceFile.name, sourceFile, {
+      // Add timestamp to filename to avoid duplicates
+      const timestamp = Date.now()
+      const uniqueFilename = `${timestamp}-${sourceFile.name}`
+      const blob = await upload(uniqueFilename, sourceFile, {
         access: 'public',
         handleUploadUrl: '/api/upload',
       })
