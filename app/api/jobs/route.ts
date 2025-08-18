@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
-import fs from 'fs/promises'
-import path from 'path'
-import { addJob } from '@/lib/queue/jobQueue'
+import { put } from '@vercel/blob'
+import { sendJobToQueue } from '@/lib/aws/sqs'
+import { createJobRecord } from '@/lib/aws/dynamodb'
 import { 
   isValidPreset, 
   isValidYouTubeUrl, 
@@ -14,7 +14,7 @@ import {
 } from '@/lib/utils/validation'
 
 export const runtime = 'nodejs'
-export const maxDuration = 300 // 5 minutes timeout for Pro plan
+export const maxDuration = 30 // Reduced since we're just queuing jobs now
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,27 +71,29 @@ export async function POST(request: NextRequest) {
           )
         }
         
-        // Sanitize filename and save
+        // Upload to Vercel Blob for temporary storage
         const sanitizedName = sanitizePath(file.name)
-        // Use /tmp for Vercel
-        const uploadDir = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(process.cwd(), 'uploads')
-        const filePath = path.join(uploadDir, `${jobId}_${sanitizedName}`)
+        const blob = await put(`uploads/${jobId}_${sanitizedName}`, buffer, {
+          access: 'public',
+        })
         
-        // Ensure upload directory exists
-        await fs.mkdir(uploadDir, { recursive: true }).catch(() => {})
+        // Create job record in DynamoDB
+        await createJobRecord(jobId, {
+          sourceType: 'upload',
+          uploadUrl: blob.url,
+          preset,
+          originalName: file.name
+        })
         
-        // Write file with size limit enforced
-        await fs.writeFile(filePath, buffer)
-        
-        // Add job to queue
-        const bullJobId = await addJob({
+        // Send job to SQS queue
+        await sendJobToQueue({
           id: jobId,
           sourceType: 'upload',
-          filePath,
+          uploadKey: blob.url, // Lambda will download from this URL
           preset,
         })
         
-        return NextResponse.json({ jobId: bullJobId })
+        return NextResponse.json({ jobId })
       } else if (sourceType === 'youtube') {
         const sourceUrl = formData.get('sourceUrl') as string
         
@@ -110,15 +112,22 @@ export async function POST(request: NextRequest) {
           )
         }
         
-        // Add job to queue (works in both dev and production with Railway)
-        const bullJobId = await addJob({
+        // Create job record in DynamoDB
+        await createJobRecord(jobId, {
+          sourceType: 'youtube',
+          sourceUrl,
+          preset
+        })
+        
+        // Send job to SQS queue
+        await sendJobToQueue({
           id: jobId,
           sourceType: 'youtube',
           sourceUrl,
           preset,
         })
         
-        return NextResponse.json({ jobId: bullJobId })
+        return NextResponse.json({ jobId })
       }
     } else {
       // Handle JSON request
@@ -151,14 +160,22 @@ export async function POST(request: NextRequest) {
           )
         }
         
-        const bullJobId = await addJob({
+        // Create job record in DynamoDB
+        await createJobRecord(jobId, {
+          sourceType: 'youtube',
+          sourceUrl: source.url,
+          preset
+        })
+        
+        // Send job to SQS queue
+        await sendJobToQueue({
           id: jobId,
           sourceType: 'youtube',
           sourceUrl: source.url,
           preset,
         })
         
-        return NextResponse.json({ jobId: bullJobId })
+        return NextResponse.json({ jobId })
       } else {
         return NextResponse.json(
           { error: 'Invalid source type' },

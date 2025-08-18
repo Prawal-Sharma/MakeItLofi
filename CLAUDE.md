@@ -1,5 +1,12 @@
 # Make It Lo-Fi - Development Guide
 
+## AWS Configuration
+**IMPORTANT**: Always use the `makeitlofi-admin` user for this project
+- AWS Account: 872515281428 (doubledash account)
+- IAM User: `makeitlofi-admin`
+- AWS Profile: `makeitlofi`
+- Region: us-west-2
+
 ## Project Overview
 Make It Lo-Fi is a web application that transforms audio from YouTube URLs or uploaded files into lo-fi versions using digital signal processing (DSP).
 

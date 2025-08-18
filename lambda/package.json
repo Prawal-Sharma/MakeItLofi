@@ -1,0 +1,26 @@
+{
+  "name": "makeitlofi-lambda",
+  "version": "1.0.0",
+  "description": "Lambda function for MakeItLofi audio processing",
+  "main": "handler.js",
+  "scripts": {
+    "build": "tsc",
+    "package": "npm run build && zip -r function.zip .",
+    "deploy": "aws lambda update-function-code --function-name makeitlofi-processor --zip-file fileb://function.zip --profile makeitlofi"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.868.0",
+    "@aws-sdk/client-s3": "^3.540.0",
+    "@aws-sdk/client-sqs": "^3.864.0",
+    "@aws-sdk/lib-dynamodb": "^3.868.0",
+    "@vercel/blob": "^1.1.1",
+    "fluent-ffmpeg": "^2.1.3",
+    "nanoid": "^5.1.5"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.134",
+    "@types/fluent-ffmpeg": "^2.1.27",
+    "@types/node": "^20.11.30",
+    "typescript": "^5.4.3"
+  }
+}

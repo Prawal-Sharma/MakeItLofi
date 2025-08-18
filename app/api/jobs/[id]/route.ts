@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getJob } from '@/lib/queue/jobQueue'
+import { getJobStatus } from '@/lib/aws/dynamodb'
 import { isValidJobId, sanitizeErrorMessage } from '@/lib/utils/validation'
 
 export async function GET(
@@ -17,8 +17,8 @@ export async function GET(
       )
     }
     
-    // Always use queue (works with Railway)
-    const job = await getJob(id)
+    // Query DynamoDB for job status
+    const job = await getJobStatus(id)
     
     if (!job) {
       return NextResponse.json(
@@ -27,42 +27,24 @@ export async function GET(
       )
     }
     
-    let status: 'pending' | 'processing' | 'completed' | 'failed'
-    
-    switch (job.status) {
-      case 'waiting':
-        status = 'pending'
-        break
-      case 'active':
-        status = 'processing'
-        break
-      case 'completed':
-        status = 'completed'
-        break
-      case 'failed':
-        status = 'failed'
-        break
-      default:
-        status = 'pending'
-    }
-    
     const response: any = {
       id: job.id,
-      status,
+      status: job.status,
       progress: job.progress || 0,
     }
     
-    if (status === 'completed' && job.result) {
+    if (job.status === 'completed' && job.result) {
+      // Return the Vercel Blob URLs directly
       response.output = {
-        mp3Url: `/api/download/${id}/mp3`,
-        wavUrl: `/api/download/${id}/wav`,
+        mp3Url: job.result.mp3Url,
+        wavUrl: job.result.wavUrl,
       }
     }
     
-    if (status === 'failed') {
+    if (job.status === 'failed') {
       // Sanitize the error message before sending to client
-      response.error = sanitizeErrorMessage({ message: job.failedReason }) || 'Processing failed'
-      console.error(`Job ${id} failed reason:`, job.failedReason)
+      response.error = sanitizeErrorMessage({ message: job.error }) || 'Processing failed'
+      console.error(`Job ${id} failed reason:`, job.error)
     }
     
     return NextResponse.json(response)

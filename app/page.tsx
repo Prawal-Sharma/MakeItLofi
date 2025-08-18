@@ -83,9 +83,10 @@ export default function Home() {
             clearInterval(pollIntervalRef.current)
             pollIntervalRef.current = null
           }
+          // Use direct Blob URLs from the response
           setOutputUrls({
-            mp3: `/api/download/${id}/mp3`,
-            wav: `/api/download/${id}/wav`,
+            mp3: data.output?.mp3Url || `/api/download/${id}/mp3`,
+            wav: data.output?.wavUrl || `/api/download/${id}/wav`,
           })
         } else if (data.status === 'failed') {
           if (pollIntervalRef.current) {
