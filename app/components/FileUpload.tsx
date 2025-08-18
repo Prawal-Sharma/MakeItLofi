@@ -126,7 +126,22 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
             </div>
           </div>
           <p className="text-xs text-gray-500">WAV, MP3, FLAC, or M4A up to 100MB</p>
-          <p className="text-xs text-gray-400">No audio file? Try our sample to test the lo-fi effect!</p>
+          <div className="space-y-1">
+            <p className="text-xs text-gray-400">No audio file? Try our sample to test the lo-fi effect!</p>
+            <p className="text-xs text-gray-400">
+              <a 
+                href="/samples/sample.mp3" 
+                download="sample-original.mp3"
+                className="text-lofi-purple hover:underline inline-flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download original sample
+              </a>
+              to compare before/after
+            </p>
+          </div>
         </div>
       )}
     </div>

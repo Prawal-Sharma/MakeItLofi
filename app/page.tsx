@@ -153,6 +153,16 @@ export default function Home() {
               
               {sourceFile && (
                 <>
+                  {sourceFile.name === 'sample.mp3' && (
+                    <div className="bg-lofi-beige/50 p-4 rounded-lg">
+                      <p className="text-sm text-lofi-brown mb-2">🎵 Sample Audio Loaded</p>
+                      <audio controls className="w-full">
+                        <source src="/samples/sample.mp3" type="audio/mpeg" />
+                        Your browser does not support the audio element.
+                      </audio>
+                      <p className="text-xs text-gray-600 mt-2">Preview the original before processing</p>
+                    </div>
+                  )}
                   <PresetSelector value={preset} onChange={setPreset} />
                   <ProcessButton 
                     onClick={handleProcess}
