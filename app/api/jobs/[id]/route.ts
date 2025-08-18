@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getJobStatus } from '@/lib/aws/dynamodb'
 import { isValidJobId, sanitizeErrorMessage } from '@/lib/utils/validation'
+import { del } from '@vercel/blob'
 
 export async function GET(
   request: NextRequest,
@@ -38,6 +39,13 @@ export async function GET(
       response.output = {
         mp3Url: job.result.mp3Url,
         wavUrl: job.result.wavUrl,
+      }
+      
+      // Delete the input blob to free up storage (fire and forget)
+      if (job.uploadUrl) {
+        del(job.uploadUrl).catch(err => {
+          console.error('Failed to delete input blob:', err)
+        })
       }
     }
     
