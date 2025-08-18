@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { upload } from '@vercel/blob/client'
 import FileUpload from './components/FileUpload'
 import PresetSelector from './components/PresetSelector'
 import ProcessButton from './components/ProcessButton'
@@ -28,17 +29,31 @@ export default function Home() {
     setProgress(0)
     
     try {
-      const formData = new FormData()
-      formData.append('file', sourceFile)
-      formData.append('preset', preset)
+      // First, upload the file directly to Vercel Blob
+      setProgress(5) // Show initial progress
+      const blob = await upload(sourceFile.name, sourceFile, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      })
       
+      setProgress(20) // Upload complete
+      
+      // Now send just the blob URL and preset to create the job
       const response = await fetch('/api/jobs', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          blobUrl: blob.url,
+          fileName: sourceFile.name,
+          preset,
+        }),
       })
       
       if (!response.ok) {
-        throw new Error('Failed to start processing')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to start processing')
       }
       
       const { jobId } = await response.json()
