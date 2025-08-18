@@ -41,10 +41,47 @@ async function downloadFromVercelBlob(url: string, localPath: string): Promise<v
 }
 
 async function downloadTextures(workDir: string): Promise<{ vinylPath?: string; tapePath?: string; rainPath?: string }> {
-  // Download texture files from Vercel Blob or S3
-  // For now, we'll skip textures in Lambda and focus on core processing
-  // Textures can be added later by uploading them to S3/Blob
-  return {}
+  const textureUrls = {
+    vinyl: 'https://uubyhkv6ycz24k7p.public.blob.vercel-storage.com/textures/vinyl_crackle.wav',
+    tape: 'https://uubyhkv6ycz24k7p.public.blob.vercel-storage.com/textures/tape_hiss.wav',
+    rain: 'https://uubyhkv6ycz24k7p.public.blob.vercel-storage.com/textures/rain_ambient.wav'
+  }
+  
+  const paths: { vinylPath?: string; tapePath?: string; rainPath?: string } = {}
+  
+  try {
+    // Download vinyl texture
+    const vinylResponse = await fetch(textureUrls.vinyl)
+    if (vinylResponse.ok) {
+      const vinylBuffer = await vinylResponse.arrayBuffer()
+      paths.vinylPath = path.join(workDir, 'vinyl_crackle.wav')
+      await fs.writeFile(paths.vinylPath, Buffer.from(vinylBuffer))
+      console.log('Downloaded vinyl texture')
+    }
+    
+    // Download tape texture
+    const tapeResponse = await fetch(textureUrls.tape)
+    if (tapeResponse.ok) {
+      const tapeBuffer = await tapeResponse.arrayBuffer()
+      paths.tapePath = path.join(workDir, 'tape_hiss.wav')
+      await fs.writeFile(paths.tapePath, Buffer.from(tapeBuffer))
+      console.log('Downloaded tape texture')
+    }
+    
+    // Download rain texture
+    const rainResponse = await fetch(textureUrls.rain)
+    if (rainResponse.ok) {
+      const rainBuffer = await rainResponse.arrayBuffer()
+      paths.rainPath = path.join(workDir, 'rain_ambient.wav')
+      await fs.writeFile(paths.rainPath, Buffer.from(rainBuffer))
+      console.log('Downloaded rain texture')
+    }
+  } catch (err) {
+    console.error('Error downloading textures:', err)
+    // Don't fail if textures can't be downloaded
+  }
+  
+  return paths
 }
 
 async function checkVolume(filePath: string): Promise<number> {
@@ -156,10 +193,96 @@ export async function processAudioJob(
       await fs.rename(tempWavPath, wavPath)
     }
     
-    onProgress?.(70)
+    onProgress?.(60)
     
-    // Convert to MP3
-    console.log('Converting to MP3...')
+    // STEP 2: Add textures for authentic lo-fi sound
+    const textures = await downloadTextures(workDir)
+    
+    if (textures.vinylPath || textures.tapePath || textures.rainPath) {
+      console.log('Step 2: Adding texture layers...')
+      const finalWavPath = path.join(workDir, `${outputId}_final.wav`)
+      
+      try {
+        let ffmpegCmd = ffmpeg()
+        let inputCount = 0
+        
+        // Add main audio
+        ffmpegCmd.input(wavPath)
+        inputCount++
+        
+        // Add textures with looping
+        if (textures.vinylPath && existsSync(textures.vinylPath)) {
+          ffmpegCmd.input(textures.vinylPath).inputOptions('-stream_loop', '-1')
+          inputCount++
+        }
+        
+        if (textures.tapePath && existsSync(textures.tapePath)) {
+          ffmpegCmd.input(textures.tapePath).inputOptions('-stream_loop', '-1')
+          inputCount++
+        }
+        
+        if (textures.rainPath && existsSync(textures.rainPath)) {
+          ffmpegCmd.input(textures.rainPath).inputOptions('-stream_loop', '-1')
+          inputCount++
+        }
+        
+        // Build mixing filter based on number of inputs
+        let filterComplex = ''
+        if (inputCount === 2) {
+          // Main + one texture
+          filterComplex = `[0:a]volume=0.6[main];[1:a]volume=${lofiPreset.textureLevel}[tex];[main][tex]amix=inputs=2:duration=first:normalize=0[mixed];[mixed]loudnorm=I=-16:TP=-1.5:LRA=11[out]`
+        } else if (inputCount === 3) {
+          // Main + two textures
+          filterComplex = `[0:a]volume=0.5[main];[1:a]volume=${lofiPreset.textureLevel * 0.8}[tex1];[2:a]volume=${lofiPreset.textureLevel * 0.9}[tex2];[main][tex1][tex2]amix=inputs=3:duration=first:normalize=0[mixed];[mixed]loudnorm=I=-16:TP=-1.5:LRA=11[out]`
+        } else if (inputCount === 4) {
+          // Main + all three textures (vinyl, tape, rain)
+          filterComplex = `[0:a]volume=0.85[main];[1:a]volume=${lofiPreset.textureLevel * 1.0}[vinyl];[2:a]volume=${lofiPreset.textureLevel * 0.3}[tape];[3:a]volume=${lofiPreset.textureLevel * 1.5}[rain];[main][vinyl][tape][rain]amix=inputs=4:duration=first:normalize=0[mixed];[mixed]loudnorm=I=-16:TP=-1.5:LRA=11[out]`
+        }
+        
+        if (filterComplex) {
+          await new Promise<void>((resolve, reject) => {
+            ffmpegCmd
+              .complexFilter(filterComplex)
+              .outputOptions('-map', '[out]')
+              .audioCodec('pcm_s16le')
+              .output(finalWavPath)
+              .on('start', (cmd) => {
+                console.log('Texture mixing command:', cmd.substring(0, 500))
+              })
+              .on('end', () => resolve())
+              .on('error', (err) => {
+                console.error('Texture mixing error:', err)
+                resolve() // Don't fail if textures fail
+              })
+              .run()
+          })
+          
+          // Check if texture mixing worked
+          if (existsSync(finalWavPath)) {
+            const finalVolume = await checkVolume(finalWavPath)
+            console.log(`Final audio volume with textures: ${finalVolume} dB`)
+            
+            if (finalVolume > -50) {
+              // Replace with textured version
+              await fs.unlink(wavPath)
+              await fs.rename(finalWavPath, wavPath)
+            } else {
+              // Texture mixing failed, keep original
+              await fs.unlink(finalWavPath).catch(() => {})
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Texture processing failed, using audio without textures:', err)
+      }
+    } else {
+      console.log('No textures available, skipping texture layer')
+    }
+    
+    onProgress?.(80)
+    
+    // STEP 3: Convert to MP3
+    console.log('Step 3: Converting to MP3...')
     
     await new Promise<void>((resolve, reject) => {
       ffmpeg(wavPath)
@@ -168,7 +291,7 @@ export async function processAudioJob(
         .output(mp3Path)
         .on('progress', (progress) => {
           if (onProgress && progress.percent) {
-            onProgress(70 + progress.percent * 0.2)
+            onProgress(80 + progress.percent * 0.15)
           }
         })
         .on('end', () => resolve())
@@ -176,7 +299,7 @@ export async function processAudioJob(
         .run()
     })
     
-    onProgress?.(90)
+    onProgress?.(95)
     
     // Upload to Vercel Blob
     console.log('Uploading to Vercel Blob...')

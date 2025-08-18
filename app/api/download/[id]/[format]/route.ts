@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getJob } from '@/lib/queue/jobQueue'
-import { createReadStream, statSync } from 'fs'
-import { access } from 'fs/promises'
-import path from 'path'
+import { getJobStatus } from '@/lib/aws/dynamodb'
 import { isValidJobId, isValidFormat, sanitizeErrorMessage } from '@/lib/utils/validation'
 
 export async function GET(
@@ -28,8 +25,8 @@ export async function GET(
       )
     }
     
-    // Get job to find file paths
-    const job = await getJob(id)
+    // Get job status from DynamoDB
+    const job = await getJobStatus(id)
     
     if (!job || job.status !== 'completed' || !job.result) {
       return NextResponse.json(
@@ -38,76 +35,18 @@ export async function GET(
       )
     }
     
-    // Get the file path
-    const filePath = format === 'mp3' ? job.result.mp3Path : job.result.wavPath
+    // Get the Blob URL based on format
+    const blobUrl = format === 'mp3' ? job.result.mp3Url : job.result.wavUrl
     
-    // For production, files are in /tmp
-    // For development, they're in the processed directory
-    const processedDir = process.env.NODE_ENV === 'production' 
-      ? '/tmp'
-      : path.join(process.cwd(), 'processed')
-    
-    // Resolve the path
-    const resolvedPath = path.resolve(filePath)
-    
-    // Security check - ensure path is within allowed directories
-    const allowedDirs = ['/tmp', path.join(process.cwd(), 'processed')]
-    const isAllowed = allowedDirs.some(dir => resolvedPath.startsWith(dir))
-    
-    if (!isAllowed) {
-      // Potential directory traversal attack
-      console.error('Directory traversal attempt detected:', { id, format, filePath })
+    if (!blobUrl) {
       return NextResponse.json(
-        { error: 'Invalid file path' },
-        { status: 403 }
-      )
-    }
-    
-    // Check if file exists and is readable
-    try {
-      await access(resolvedPath)
-    } catch {
-      return NextResponse.json(
-        { error: 'Processed file not found' },
+        { error: 'File URL not found' },
         { status: 404 }
       )
     }
     
-    // Get file stats for headers
-    const stats = statSync(resolvedPath)
-    // Extract actual filename from the path
-    const filename = path.basename(resolvedPath)
-    
-    // Create a readable stream instead of loading entire file into memory
-    const stream = createReadStream(resolvedPath)
-    
-    // Convert Node.js stream to Web Stream
-    const webStream = new ReadableStream({
-      start(controller) {
-        stream.on('data', (chunk) => {
-          controller.enqueue(chunk)
-        })
-        stream.on('end', () => {
-          controller.close()
-        })
-        stream.on('error', (error) => {
-          controller.error(error)
-        })
-      },
-      cancel() {
-        stream.destroy()
-      }
-    })
-    
-    // Return streamed file with appropriate headers
-    return new NextResponse(webStream, {
-      headers: {
-        'Content-Type': format === 'mp3' ? 'audio/mpeg' : 'audio/wav',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': stats.size.toString(),
-        'Cache-Control': 'public, max-age=3600',
-      },
-    })
+    // Redirect to the Vercel Blob URL
+    return NextResponse.redirect(blobUrl)
   } catch (error) {
     console.error('Download error:', error)
     return NextResponse.json(

@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.868.0",
+    "@aws-sdk/client-sqs": "^3.864.0",
+    "@aws-sdk/lib-dynamodb": "^3.868.0",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/blob": "^1.1.1",
     "bull": "^4.16.5",
     "ffmpeg-static": "^5.2.0",
     "fluent-ffmpeg": "^2.1.3",
