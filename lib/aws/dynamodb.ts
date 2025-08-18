@@ -18,6 +18,7 @@ export interface JobStatus {
   progress: number
   createdAt: string
   updatedAt: string
+  uploadUrl?: string // URL of the uploaded input file
   result?: {
     mp3Url: string
     wavUrl: string
@@ -34,6 +35,7 @@ export async function createJobRecord(id: string, jobData: any): Promise<void> {
       status: 'pending',
       progress: 0,
       jobData,
+      uploadUrl: jobData.uploadUrl, // Store the upload URL for later cleanup
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
