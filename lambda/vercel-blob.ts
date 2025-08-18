@@ -10,12 +10,14 @@ export async function uploadToVercelBlob(
     throw new Error('BLOB_READ_WRITE_TOKEN not configured')
   }
   
-  const response = await fetch('https://blob.vercel-storage.com/upload', {
-    method: 'POST',
+  const url = `https://blob.vercel-storage.com/upload?pathname=${encodeURIComponent(filename)}`
+  
+  const response = await fetch(url, {
+    method: 'PUT',
     headers: {
       'authorization': `Bearer ${BLOB_TOKEN}`,
-      'x-content-type': contentType,
-      'x-filename': filename
+      'x-api-version': '7',
+      'content-type': contentType
     },
     body: buffer
   })
