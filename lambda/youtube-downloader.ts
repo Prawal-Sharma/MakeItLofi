@@ -5,8 +5,23 @@ import fs from 'fs'
 
 const execAsync = promisify(exec)
 
-// Use yt-dlp binary in Lambda layer
-const ytDlpPath = '/opt/bin/yt-dlp'
+// Setup yt-dlp binary
+function setupYtDlp(): string {
+  const bundledYtDlp = path.join(__dirname, 'yt-dlp')
+  const tmpYtDlp = '/tmp/yt-dlp'
+  
+  if (fs.existsSync(bundledYtDlp) && !fs.existsSync(tmpYtDlp)) {
+    try {
+      fs.copyFileSync(bundledYtDlp, tmpYtDlp)
+      fs.chmodSync(tmpYtDlp, 0o755)
+      console.log('Copied yt-dlp to /tmp')
+    } catch (err) {
+      console.error('Failed to copy yt-dlp:', err)
+    }
+  }
+  
+  return fs.existsSync(tmpYtDlp) ? tmpYtDlp : bundledYtDlp
+}
 
 export async function downloadYouTube(
   url: string,
@@ -15,9 +30,12 @@ export async function downloadYouTube(
 ): Promise<string> {
   const outputPath = path.join(workDir, `${jobId}.mp3`)
   
+  // Setup yt-dlp
+  const ytDlpPath = setupYtDlp()
+  
   // Check if yt-dlp exists
   if (!fs.existsSync(ytDlpPath)) {
-    throw new Error('yt-dlp binary not found in Lambda layer')
+    throw new Error('yt-dlp binary not found')
   }
   
   const command = `${ytDlpPath} -x --audio-format mp3 --audio-quality 0 -o "${outputPath}" "${url}"`

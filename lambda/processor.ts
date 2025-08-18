@@ -6,10 +6,32 @@ import { nanoid } from 'nanoid'
 import { downloadYouTube } from './youtube-downloader'
 import { uploadToVercelBlob } from './vercel-blob'
 
+import { copyFileSync, chmodSync } from 'fs'
+
 // Set FFmpeg path for Lambda environment
-const ffmpegPath = '/opt/bin/ffmpeg'
-if (existsSync(ffmpegPath)) {
-  ffmpeg.setFfmpegPath(ffmpegPath)
+async function setupFfmpeg() {
+  const bundledFfmpeg = path.join(__dirname, 'ffmpeg')
+  const tmpFfmpeg = '/tmp/ffmpeg'
+  
+  if (existsSync(bundledFfmpeg) && !existsSync(tmpFfmpeg)) {
+    try {
+      copyFileSync(bundledFfmpeg, tmpFfmpeg)
+      chmodSync(tmpFfmpeg, 0o755)
+      console.log('Copied FFmpeg to /tmp')
+    } catch (err) {
+      console.error('Failed to copy FFmpeg:', err)
+    }
+  }
+  
+  // Use the FFmpeg in /tmp
+  if (existsSync(tmpFfmpeg)) {
+    ffmpeg.setFfmpegPath(tmpFfmpeg)
+    console.log('Using FFmpeg at /tmp/ffmpeg')
+    return true
+  } else {
+    console.error('FFmpeg not found!')
+    return false
+  }
 }
 
 export interface ProcessJobData {
@@ -109,6 +131,11 @@ export async function processAudioJob(
   jobData: ProcessJobData,
   onProgress?: (progress: number) => void
 ): Promise<{ mp3Url: string; wavUrl: string }> {
+  // Setup FFmpeg first
+  const ffmpegReady = await setupFfmpeg()
+  if (!ffmpegReady) {
+    throw new Error('Failed to setup FFmpeg in Lambda environment')
+  }
   const workDir = '/tmp'
   const outputId = nanoid()
   const tempWavPath = path.join(workDir, `${outputId}_temp.wav`)
