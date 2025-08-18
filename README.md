@@ -1,6 +1,6 @@
 # Make It Lo-Fi 🎵
 
-Transform any audio into authentic lo-fi with vintage textures and analog warmth. A web application that takes YouTube URLs or audio files and applies professional lo-fi processing using advanced DSP techniques and real texture samples.
+Transform your audio into authentic lo-fi with vintage textures and analog warmth. A web application that takes audio files and applies professional lo-fi processing using advanced DSP techniques and real texture samples.
 
 ## What is Make It Lo-Fi?
 
@@ -8,14 +8,13 @@ Make It Lo-Fi is a web-based audio processing tool that transforms modern, clean
 
 ## Features
 
-- 🎥 **YouTube Support**: Direct processing from YouTube URLs using yt-dlp
-- 📁 **File Upload**: Support for WAV, MP3, and FLAC files (up to 50MB)
-- 🎛️ **Professional DSP**: Authentic lo-fi processing with multiple audio effects
-- 🎧 **Real Textures**: Actual vinyl crackle, tape hiss, and rain ambiance samples
-- 📊 **Progress Tracking**: Real-time processing status with cassette animation
+- 📁 **File Upload**: Support for WAV, MP3, FLAC, M4A/AAC files (up to 500MB)
+- 🎵 **Sample Audio**: Try it out with our built-in sample track
+- 🎛️ **Three Presets**: Default, Tape 90s, and Sleep modes
+- 📊 **Real-time Progress**: Live processing status with retro cassette animation
 - 💾 **Dual Format Export**: Download in high-quality MP3 (320kbps) or WAV
-- 🔊 **Loudness Normalization**: Consistent output volume using EBU R128 standard
-- ⚡ **Fast Processing**: Optimized FFmpeg pipeline with streaming architecture
+- ⚡ **Serverless Processing**: AWS Lambda for scalable audio processing
+- 🔒 **Secure**: Direct upload to cloud storage, bypassing size limitations
 
 ## Tech Stack
 
@@ -23,113 +22,86 @@ Make It Lo-Fi is a web-based audio processing tool that transforms modern, clean
 - **Next.js 15.1** - React framework with App Router
 - **TypeScript** - Type-safe development
 - **Tailwind CSS** - Utility-first styling
-- **React 19** - UI components
+- **Vercel Blob** - Direct file uploads
 
-### Backend
-- **Next.js API Routes** - Serverless API endpoints
-- **FFmpeg 7.1** - Audio processing engine
-- **fluent-ffmpeg** - FFmpeg Node.js wrapper
-- **yt-dlp** - YouTube audio extraction
-- **Bull Queue** - Job queue management
-- **Redis** - Queue persistence (optional)
+### Backend Infrastructure
+- **AWS Lambda** - Serverless audio processing
+- **AWS SQS** - Job queue management
+- **AWS DynamoDB** - Job status tracking
+- **Vercel** - Frontend hosting and API routes
+- **FFmpeg** - Professional audio processing engine
 
 ### Audio Processing
 - **FFmpeg filters** - Complex audio filter chains
-- **EBU R128** - Loudness normalization
 - **Custom DSP chain** - Tempo, pitch, EQ, compression, effects
-
-### Deployment
-- **Vercel/Railway** - Serverless deployment ready
-- **ffmpeg-static** - Bundled FFmpeg for production
+- **Real texture samples** - Vinyl, tape, and ambient sounds
 
 ## Architecture
 
 ### Processing Pipeline
 ```
-Input (YouTube/File) → Job Queue → Audio Processing → Output (MP3/WAV)
-                           ↓
-                      Bull + Redis
-                           ↓
-                    FFmpeg DSP Chain
-                           ↓
-                    Texture Mixing
-                           ↓
-                 Loudness Normalization
+File Upload → Vercel Blob → API → SQS Queue → Lambda → Processing → Output
+                                       ↓
+                                  DynamoDB
+                                  (Job Status)
 ```
 
-### Job Queue System
-- Bull queue for async processing
-- Redis for production persistence
-- In-memory fallback for development
-- Automatic cleanup of old jobs/files
+### Direct Upload Architecture (New!)
+- Client uploads directly to Vercel Blob (supports 500MB files)
+- Only blob URLs sent to API (bypasses 4.5MB function limit)
+- Lambda downloads from blob for processing
+- Processed files stored back in blob storage
+
+## Lo-Fi Presets
+
+### 🎧 Default
+Balanced lo-fi effect with moderate processing
+
+### 📼 Tape 90s
+Warmer sound with more saturation, mimicking 90s cassette tapes
+
+### 😴 Sleep
+Slower, dreamier with more reverb for relaxation
 
 ## Technical Audio Processing Details
 
 ### DSP Chain Implementation
 
-Our lo-fi processing uses a sophisticated FFmpeg filter chain:
+Our lo-fi processing uses sophisticated FFmpeg filter chains customized per preset:
 
-#### 1. **Core Audio Effects**
-- **Tempo**: Slowed to 92% (8% reduction) for that lazy lo-fi feel
-- **Pitch**: Shifted down to 97% (3% reduction) for warmth
-- **EQ Filtering**:
-  - High-pass at 60Hz (removes rumble)
-  - Low-pass at 9kHz (cuts harsh highs)
-  - Bass boost: +3dB at 100Hz
-- **Compression**: 3:1 ratio at -18dB threshold
-- **Stereo Narrowing**: 70% width for vintage mono-ish sound
+#### Core Effects (All Presets)
+- **Tempo Reduction**: 88-95% speed for that lazy feel
+- **Pitch Shifting**: Down 1-3 semitones for warmth
+- **EQ Filtering**: 
+  - High-pass to remove rumble
+  - Low-pass (8-12kHz) for vintage character
+  - Mid-frequency adjustments for body
+- **Compression**: Gentle dynamics control
+- **Stereo Processing**: Narrowed field for vintage mono-ish sound
 
-#### 2. **Analog Simulation**
-- **Tape Wow/Flutter**: Vibrato at 0.5Hz with 2% depth
-- **Phase Effects**: Subtle phasing for tape warmth
-- **Echo/Reverb**: 60ms delay with 40% mix for space
+#### Texture Layers
+Real audio textures mixed at different levels:
+- **Vinyl Crackle**: Authentic record player sounds
+- **Tape Hiss**: Analog tape characteristics
+- **Rain Ambient**: Atmospheric background
 
-#### 3. **Texture Layers**
-Three real audio texture files mixed in:
-- **Vinyl Crackle** (vinyl_crackle.wav): 64% mix level
-- **Tape Hiss** (tape_hiss.wav): 24% mix level  
-- **Rain Ambient** (rain_ambient.wav): 80% mix level
-
-#### 4. **Volume Management**
-- **Input normalization**: 2x initial boost
-- **Texture compensation**: Adjusted per source loudness
-- **Final normalization**: EBU R128 at -16 LUFS
-- **Emergency boost**: If output < -20dB
-
-### FFmpeg Filter Chain (Simplified)
-```javascript
-// Main audio processing
-atempo=0.92,
-asetrate=44100*0.97,
-highpass=f=60,
-lowpass=f=9000,
-bass=g=3:f=100,
-aphaser=speed=0.5:decay=0.4,
-vibrato=f=0.5:d=0.02,
-aecho=0.8:0.88:60:0.4,
-stereotools=slev=0.7,
-acompressor=threshold=0.125:ratio=3
-
-// Texture mixing (4 inputs)
-[main][vinyl][tape][rain]amix=inputs=4:normalize=0,
-loudnorm=I=-16:TP=-1.5:LRA=11
-```
+#### Analog Simulation
+- **Wow/Flutter**: Pitch instability of tape
+- **Saturation**: Soft clipping for warmth
+- **Echo/Reverb**: Spatial dimension
+- **Sidechain Compression**: Subtle pumping effect
 
 ## Getting Started
 
-### Prerequisites
+### Live Demo
+Visit [makeitlofi.com](https://makeitlofi.com) to try it instantly!
 
-- Node.js 18+ 
-- npm or yarn
-- FFmpeg installed on your system
-- Redis (optional for production)
-
-### Installation
+### Local Development
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/make-it-lofi.git
-cd make-it-lofi
+git clone https://github.com/Prawal-Sharma/MakeItLofi.git
+cd MakeItLofi
 ```
 
 2. Install dependencies:
@@ -142,51 +114,47 @@ npm install
 cp .env.example .env.local
 ```
 
-Edit `.env.local`:
+Required environment variables:
 ```env
-REDIS_URL=redis://localhost:6379  # Optional
-NODE_ENV=development
+# AWS Configuration
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+SQS_QUEUE_URL=your_queue_url
+JOBS_TABLE=makeitlofi-jobs
+
+# Vercel Blob
+BLOB_READ_WRITE_TOKEN=your_token
 ```
 
-4. Add texture files to `public/audio/textures/`:
-- vinyl_crackle.wav
-- tape_hiss.wav  
-- rain_ambient.wav
-
-5. Run the development server:
+4. Run the development server:
 ```bash
 npm run dev
 ```
 
-6. Open [http://localhost:3000](http://localhost:3000)
+5. Open [http://localhost:3000](http://localhost:3000)
 
 ## Usage
 
 1. **Choose Input**: 
-   - Paste a YouTube URL, or
-   - Upload an audio file (WAV/MP3/FLAC)
-2. **Process**: Click "Make it Lo-Fi"
-3. **Wait**: Watch the cassette animation during processing
-4. **Preview**: Listen to your lo-fi track
-5. **Download**: Get MP3 or WAV format
+   - Click "Browse Files" to select from your computer
+   - Or click "Try Sample" to test with our demo track
+   - Drag and drop also supported
+2. **Select Preset**: Choose between Default, Tape 90s, or Sleep
+3. **Process**: Click "Make it Lo-Fi"
+4. **Wait**: Watch the cassette animation during processing
+5. **Download**: Get your lo-fi track in MP3 or WAV format
 
 ## API Documentation
 
 ### Create Processing Job
 ```http
 POST /api/jobs
-Content-Type: multipart/form-data
+Content-Type: application/json
 
-sourceType: "youtube" | "upload"
-sourceUrl: "https://youtube.com/watch?v=..." (if youtube)
-file: <audio file> (if upload)
-preset: "default"
-```
-
-Response:
-```json
 {
-  "jobId": "123"
+  "blobUrl": "https://...",
+  "fileName": "song.mp3",
+  "preset": "default" | "tape90s" | "sleep"
 }
 ```
 
@@ -198,23 +166,37 @@ GET /api/jobs/:jobId
 Response:
 ```json
 {
-  "id": "123",
+  "id": "abc123",
   "status": "completed",
   "progress": 100,
-  "result": {
-    "mp3Path": "/processed/...",
-    "wavPath": "/processed/..."
+  "output": {
+    "mp3Url": "https://...",
+    "wavUrl": "https://..."
   }
 }
 ```
 
-### Download Processed Audio
-```http
-GET /api/download/:jobId/mp3
-GET /api/download/:jobId/wav
+## AWS Lambda Deployment
+
+The audio processing runs on AWS Lambda for scalability:
+
+1. Navigate to lambda directory:
+```bash
+cd lambda
 ```
 
-## Development
+2. Build and package:
+```bash
+npm run build
+npm run package
+```
+
+3. Deploy to AWS:
+```bash
+npm run deploy
+```
+
+## Development Commands
 
 ```bash
 npm run dev        # Start development server
@@ -226,57 +208,53 @@ npm run typecheck  # TypeScript checking
 
 ## Security Features
 
-- Path traversal protection
-- Input validation and sanitization  
-- File size limits (50MB)
-- MIME type verification
-- Secure file handling with cleanup
-- Rate limiting ready
+- ✅ Direct client-side uploads (no server bottleneck)
+- ✅ Path traversal protection
+- ✅ Input validation and sanitization
+- ✅ File type verification
+- ✅ Secure cloud storage
+- ✅ Automatic file cleanup
 
-## Performance Optimizations
+## Performance Features
 
-- Streaming file processing (no full file loading)
-- Automatic cleanup of old files (30 min)
-- Memory-efficient FFmpeg pipelines
-- Job queue with retry logic
-- Optimized texture looping
+- ⚡ Serverless architecture (infinite scale)
+- ⚡ Direct uploads (bypasses function limits)
+- ⚡ Streaming processing (memory efficient)
+- ⚡ SQS queue with retry logic
+- ⚡ DynamoDB for fast status updates
+- ⚡ CDN-served processed files
+
+## File Size Limits
+
+- **Maximum file size**: 500MB (Vercel Blob limit)
+- **Recommended**: Under 100MB for faster processing
+- **All common audio formats supported**: WAV, MP3, FLAC, M4A, AAC
 
 ## Troubleshooting
 
-### FFmpeg not found
-Install FFmpeg on your system:
-- macOS: `brew install ffmpeg`
-- Ubuntu: `sudo apt install ffmpeg`
-- Windows: Download from ffmpeg.org
+### Large files failing?
+The app now supports files up to 500MB through direct upload. If you experience issues:
+- Check your internet connection stability
+- Try a smaller file first
+- Ensure the file isn't corrupted
 
-### Redis connection errors
-The app works without Redis in development. For production, set `REDIS_URL` in environment variables.
+### Processing taking too long?
+- Normal processing time: 30-60 seconds for a 3-minute song
+- Longer files take proportionally more time
+- Check the AWS Lambda logs if consistently slow
 
-### Silent or quiet output
-The loudness normalization should handle this, but check:
-- Input file isn't corrupted
-- FFmpeg version is 4.0+
-- Texture files are present
+### No audio output?
+- Verify the input file plays correctly
+- Check browser console for errors
+- Try a different audio format
 
-## Roadmap
+## Deployment
 
-### Completed ✅
-- YouTube URL support
-- File upload
-- Real texture mixing
-- Loudness normalization
-- Progress tracking
-- Security hardening
+### Frontend (Vercel)
+The frontend auto-deploys from the main branch via Vercel's GitHub integration.
 
-### Planned
-- [ ] Multiple presets (Tape 90s, Sleep)
-- [ ] User accounts and saved settings
-- [ ] Batch processing
-- [ ] Custom DSP parameter controls
-- [ ] Playlist support
-- [ ] Real-time preview
-- [ ] API for developers
-- [ ] Mobile app
+### Backend (AWS Lambda)
+Lambda functions are deployed using the AWS CLI. Ensure your AWS credentials are configured.
 
 ## Contributing
 
@@ -296,19 +274,8 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 - FFmpeg team for the incredible audio processing library
 - The lo-fi hip hop community for inspiration
-- Sample texture creators
-- All contributors and testers
-
-## Technical Notes
-
-This project showcases:
-- Advanced FFmpeg filter chain usage
-- Real-time audio processing in web apps
-- Job queue architecture
-- Streaming file handling
-- Modern Next.js patterns
-
-For developers interested in audio processing, check out `/lib/audio/processor-simple.ts` for the complete DSP implementation.
+- AWS for scalable serverless infrastructure
+- Vercel for seamless deployment
 
 ---
 
